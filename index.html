@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nasko Dev — Developer & Creator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── CSS Variables ─────────────────────────────── */
+    :root {
+      --bg:           hsl(0 0% 0%);
+      --fg:           hsl(0 0% 100%);
+      --muted:        hsl(0 0% 55%);
+      --discord:      hsl(235 86% 65%);
+      --discord-glow: hsla(235 86% 65% / .45);
+      --title-glow1:  hsla(0 0% 100% / .15);
+      --title-glow2:  hsla(0 0% 100% / .05);
+    }
+
+    /* ── Reset ─────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: 'Inter', sans-serif;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ── Particles Canvas ──────────────────────────── */
+    #particles {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Main Content ──────────────────────────────── */
+    .stage {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+      text-align: center;
+      padding: 2rem;
+    }
+
+    /* ── Title ─────────────────────────────────────── */
+    .title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: clamp(3.5rem, 10vw, 6rem);
+      letter-spacing: -0.03em;
+      line-height: 1;
+      color: var(--fg);
+      text-shadow:
+        0 0 40px var(--title-glow1),
+        0 0 80px var(--title-glow2);
+      opacity: 0;
+      transform: translateY(30px);
+      animation: fadeUp 0.8s cubic-bezier(.22,1,.36,1) 0.1s forwards;
+    }
+
+    /* ── Tagline ───────────────────────────────────── */
+    .tagline {
+      font-family: 'Inter', sans-serif;
+      font-size: clamp(1rem, 2.5vw, 1.2rem);
+      font-weight: 400;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted);
+      opacity: 0;
+      transform: translateY(30px);
+      animation: fadeUp 0.8s cubic-bezier(.22,1,.36,1) 0.3s forwards;
+    }
+
+    /* ── Discord Button ────────────────────────────── */
+    .discord-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-top: 0.5rem;
+      padding: 0.75rem 2rem;
+      background: var(--discord);
+      color: #fff;
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      font-size: 0.95rem;
+      border-radius: 0.5rem;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.2s cubic-bezier(.22,1,.36,1),
+                  box-shadow 0.2s ease;
+      opacity: 0;
+      animation: fadeUp 0.8s cubic-bezier(.22,1,.36,1) 0.5s forwards;
+    }
+    .discord-btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 30px var(--discord-glow), 0 0 60px var(--discord-glow);
+    }
+    .discord-btn:active { transform: scale(0.97); }
+
+    .discord-btn svg { width: 18px; height: 18px; fill: currentColor; }
+
+    /* ── Social Icons ──────────────────────────────── */
+    .socials {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      opacity: 0;
+      animation: fadeIn 0.7s ease 0.7s forwards;
+    }
+
+    .social-link {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 0.4rem;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.2s, background 0.2s, transform 0.2s cubic-bezier(.22,1,.36,1);
+    }
+    .social-link:hover {
+      color: var(--fg);
+      background: hsla(0 0% 100% / .08);
+      transform: scale(1.1);
+    }
+    .social-link svg {
+      width: 20px;
+      height: 20px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    /* ── Animations ────────────────────────────────── */
+    @keyframes fadeUp {
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn {
+      to { opacity: 1; }
+    }
+
+    /* ── Deploy hint (hidden in production) ────────── */
+    .deploy-note {
+      position: fixed;
+      bottom: 1.2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.7rem;
+      color: hsla(0 0% 100% / .18);
+      letter-spacing: 0.08em;
+      pointer-events: none;
+      z-index: 2;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Particle Canvas -->
+  <canvas id="particles"></canvas>
+
+  <!-- Main Stage -->
+  <main class="stage">
+
+    <h1 class="title">Nasko Dev</h1>
+
+    <p class="tagline">Developer &amp; Creator</p>
+
+    <!-- Discord Button -->
+    <a class="discord-btn"
+       href="https://discord.gg/rSbJmG9CnY"
+       target="_blank" rel="noopener noreferrer">
+      <!-- Discord logo mark -->
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+      </svg>
+      Join Discord
+    </a>
+
+    <!-- Social Links -->
+    <div class="socials">
+
+      <!-- GitHub -->
+      <a class="social-link"
+         href="https://github.com/atanass4000-design"
+         target="_blank" rel="noopener noreferrer"
+         aria-label="GitHub">
+        <svg viewBox="0 0 24 24">
+          <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+        </svg>
+      </a>
+
+      <!-- Twitter / X -->
+      <a class="social-link"
+         href="https://x.com/NaskoBul"
+         target="_blank" rel="noopener noreferrer"
+         aria-label="X / Twitter">
+        <svg viewBox="0 0 24 24">
+          <path d="M4 4l16 16M4 20 20 4" stroke="currentColor"/>
+        </svg>
+      </a>
+
+      <!-- YouTube -->
+      <a class="social-link"
+         href="https://www.youtube.com/@NaskoDev"
+         target="_blank" rel="noopener noreferrer"
+         aria-label="YouTube">
+        <svg viewBox="0 0 24 24">
+          <path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46A2.78 2.78 0 0 0 1.46 6.42 29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58 2.78 2.78 0 0 0 1.95 1.96C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.96A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/>
+          <polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" fill="currentColor" stroke="none"/>
+        </svg>
+      </a>
+
+    </div>
+  </main>
+
+  <!-- Deploy note -->
+  <p class="deploy-note">naskodev.com · built with ♥</p>
+
+  <script>
+    /* ── Floating Particles ─────────────────────────── */
+    (function () {
+      const canvas = document.getElementById('particles');
+      const ctx    = canvas.getContext('2d');
+      let W, H, particles = [];
+
+      function resize() {
+        W = canvas.width  = window.innerWidth;
+        H = canvas.height = window.innerHeight;
+      }
+
+      function rand(a, b) { return a + Math.random() * (b - a); }
+
+      function createParticle() {
+        return {
+          x:        rand(0, W),
+          y:        rand(0, H),
+          r:        rand(1, 4),
+          baseY:    rand(0, H),
+          amp:      rand(15, 60),       // float amplitude
+          speed:    rand(0.2, 0.7),     // radians / s
+          phase:    rand(0, Math.PI * 2),
+          opacity:  rand(0.08, 0.18),
+        };
+      }
+
+      function init() {
+        resize();
+        particles = Array.from({ length: 40 }, createParticle);
+      }
+
+      let last = performance.now();
+      function tick(now) {
+        const dt = (now - last) / 1000;
+        last = now;
+        ctx.clearRect(0, 0, W, H);
+
+        for (const p of particles) {
+          p.phase += p.speed * dt;
+          p.y = p.baseY + Math.sin(p.phase) * p.amp;
+
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(255,255,255,${p.opacity})`;
+          ctx.fill();
+        }
+        requestAnimationFrame(tick);
+      }
+
+      window.addEventListener('resize', () => {
+        resize();
+        particles.forEach(p => { p.x = rand(0, W); p.baseY = rand(0, H); });
+      });
+
+      init();
+      requestAnimationFrame(tick);
+    })();
+  </script>
+
+</body>
+</html>
