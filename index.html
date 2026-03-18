@@ -189,18 +189,15 @@
       0%, 100% { opacity: 1; transform: scale(1); }
       50%       { opacity: 0.4; transform: scale(0.7); }
     }
-    
-    /* ── Bottom note ── */
+
+    /* ── Welcome note ── */
     .deploy-note {
-      position: fixed;
-      bottom: 1.2rem;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 0.7rem;
-      color: hsla(0 0% 100% / .18);
-      letter-spacing: 0.08em;
-      pointer-events: none;
-      z-index: 2;
+      font-size: 0.72rem;
+      color: hsla(0 0% 100% / .22);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      opacity: 0;
+      animation: fadeIn 0.7s ease 0.9s forwards;
     }
 
     @keyframes fadeUp {
@@ -252,12 +249,6 @@
 
   </main>
 
-  <!-- Toast -->
-  <div class="toast" id="toast">
-    <span>👋</span>
-    <span id="toast-msg">Welcome to Nasko Dev!</span>
-  </div>
-
   <p class="deploy-note">Welcome</p>
 
   <script>
@@ -272,17 +263,6 @@
       } else {
         el.textContent = `You've visited ${visits} times`;
       }
-    })();
-
-    /* ── Toast ── */
-    (function () {
-      const toast = document.getElementById('toast');
-      const msg   = document.getElementById('toast-msg');
-      const h     = new Date().getHours();
-      const greet = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
-      msg.textContent = `${greet}! Welcome to Nasko Dev 🚀`;
-      setTimeout(() => toast.classList.add('show'), 1400);
-      setTimeout(() => toast.classList.remove('show'), 5200);
     })();
 
     /* ── Avatar Wobble on Click ── */
