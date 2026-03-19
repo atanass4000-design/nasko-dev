@@ -515,34 +515,210 @@
       });
     })();
 
-    /* ── Floating Particles ── */
+    /* ── Nebula Background ── */
     (function () {
       const canvas = document.getElementById('particles');
       const ctx    = canvas.getContext('2d');
-      let W, H, particles = [];
-      function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
-      function rand(a, b) { return a + Math.random() * (b - a); }
-      function createParticle() {
-        return { x: rand(0,W), y: rand(0,H), r: rand(1,4), baseY: rand(0,H),
-                 amp: rand(15,60), speed: rand(0.2,0.7), phase: rand(0,Math.PI*2), opacity: rand(0.08,0.18) };
+      let W, H;
+
+      function resize() {
+        W = canvas.width  = window.innerWidth;
+        H = canvas.height = window.innerHeight;
       }
-      function init() { resize(); particles = Array.from({ length: 40 }, createParticle); }
+      resize();
+      window.addEventListener('resize', () => { resize(); init(); });
+
+      const rand  = (a, b) => a + Math.random() * (b - a);
+      const randI = (a, b) => Math.floor(rand(a, b));
+
+      /* ── 1. Stars ── */
+      let stars = [];
+      function makeStars() {
+        stars = [];
+        const count = Math.floor((W * H) / 2200);
+        for (let i = 0; i < count; i++) {
+          const tier = Math.random();
+          stars.push({
+            x:       rand(0, W),
+            y:       rand(0, H),
+            r:       tier < 0.75 ? rand(0.3, 0.9)   // tiny
+                   : tier < 0.94 ? rand(0.9, 1.8)   // medium
+                   :               rand(1.8, 3.2),   // bright
+            baseOp:  tier < 0.75 ? rand(0.25, 0.55)
+                   : tier < 0.94 ? rand(0.45, 0.75)
+                   :               rand(0.7,  1.0),
+            phase:   rand(0, Math.PI * 2),
+            speed:   rand(0.3, 1.2),
+            // colour: mostly white, some blue-tinted, few purple
+            hue:     Math.random() < 0.6 ? 0
+                   : Math.random() < 0.7 ? randI(210, 240)
+                   :                       randI(260, 280),
+            sat:     Math.random() < 0.6 ? 0 : rand(40, 80),
+          });
+        }
+      }
+
+      /* ── 2. Nebula Clouds ── */
+      let clouds = [];
+      function makeClouds() {
+        clouds = [];
+        const defs = [
+          // [cx%, cy%, rx, ry, hue, sat, baseAlpha, speed]
+          [0.38, 0.28, W*0.38, H*0.30, 225, 85, 0.13, 0.00012],
+          [0.65, 0.55, W*0.30, H*0.28, 240, 90, 0.10, 0.00009],
+          [0.22, 0.62, W*0.25, H*0.22, 260, 80, 0.08, 0.00014],
+          [0.75, 0.20, W*0.20, H*0.18, 210, 75, 0.07, 0.00011],
+          [0.50, 0.72, W*0.35, H*0.20, 235, 88, 0.06, 0.00010],
+        ];
+        defs.forEach(([cxR, cyR, rx, ry, hue, sat, alpha, spd]) => {
+          clouds.push({
+            cx: cxR * W, cy: cyR * H,
+            rx, ry,
+            hue, sat, alpha,
+            phaseX: rand(0, Math.PI*2),
+            phaseY: rand(0, Math.PI*2),
+            speed: spd,
+            driftAmpX: W * rand(0.02, 0.06),
+            driftAmpY: H * rand(0.015, 0.04),
+          });
+        });
+      }
+
+      /* ── 3. Shooting Stars ── */
+      let shooters = [];
+      let shootTimer = 0;
+      function spawnShooter() {
+        const startX = rand(W * 0.1, W * 0.9);
+        const angle  = rand(Math.PI * 0.1, Math.PI * 0.4);
+        shooters.push({
+          x: startX, y: rand(0, H * 0.4),
+          vx: Math.cos(angle) * rand(8, 14),
+          vy: Math.sin(angle) * rand(4, 8),
+          len: rand(60, 140),
+          life: 1, decay: rand(0.012, 0.025),
+        });
+      }
+
+      function init() { makeStars(); makeClouds(); }
+      init();
+
+      /* ── Render ── */
+      let t = 0;
       let last = performance.now();
+
       function tick(now) {
-        const dt = (now - last) / 1000; last = now;
-        ctx.clearRect(0, 0, W, H);
-        for (const p of particles) {
-          p.phase += p.speed * dt;
-          p.y = p.baseY + Math.sin(p.phase) * p.amp;
+        const dt = Math.min((now - last) / 16.67, 3);
+        last = now;
+        t   += dt;
+
+        // deep space gradient base
+        const bg = ctx.createLinearGradient(0, 0, W * 0.6, H);
+        bg.addColorStop(0,   '#00000f');
+        bg.addColorStop(0.4, '#03001a');
+        bg.addColorStop(0.7, '#050022');
+        bg.addColorStop(1,   '#000008');
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, W, H);
+
+        /* -- nebula clouds -- */
+        ctx.save();
+        ctx.globalCompositeOperation = 'screen';
+        for (const c of clouds) {
+          const cx = c.cx + Math.sin(t * c.speed * 0.7 + c.phaseX) * c.driftAmpX;
+          const cy = c.cy + Math.cos(t * c.speed       + c.phaseY) * c.driftAmpY;
+          const pulse = 1 + 0.06 * Math.sin(t * c.speed * 2 + c.phaseX);
+
+          // layered ellipse — multiple passes for depth
+          for (let pass = 0; pass < 3; pass++) {
+            const scale = 1 - pass * 0.22;
+            const a     = c.alpha * (1 - pass * 0.28) * pulse;
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.scale(c.rx * scale / 100, c.ry * scale / 100);
+            const grd = ctx.createRadialGradient(0, 0, 0, 0, 0, 100);
+            grd.addColorStop(0,   `hsla(${c.hue},${c.sat}%,65%,${a})`);
+            grd.addColorStop(0.4, `hsla(${c.hue+10},${c.sat-10}%,50%,${a*0.6})`);
+            grd.addColorStop(0.75,`hsla(${c.hue+20},${c.sat-20}%,40%,${a*0.25})`);
+            grd.addColorStop(1,   `hsla(${c.hue},${c.sat}%,30%,0)`);
+            ctx.beginPath();
+            ctx.arc(0, 0, 100, 0, Math.PI * 2);
+            ctx.fillStyle = grd;
+            ctx.fill();
+            ctx.restore();
+          }
+        }
+        ctx.restore();
+
+        /* -- stars -- */
+        for (const s of stars) {
+          s.phase += s.speed * 0.01 * dt;
+          const op = s.baseOp * (0.7 + 0.3 * Math.sin(s.phase));
+          const col = s.sat > 0
+            ? `hsla(${s.hue},${s.sat}%,85%,${op})`
+            : `rgba(255,255,255,${op})`;
+
+          // halo for bright stars
+          if (s.r > 1.8) {
+            const halo = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.r * 5);
+            halo.addColorStop(0,   s.sat > 0 ? `hsla(${s.hue},80%,80%,${op*0.5})` : `rgba(200,220,255,${op*0.4})`);
+            halo.addColorStop(1,   'transparent');
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, s.r * 5, 0, Math.PI * 2);
+            ctx.fillStyle = halo;
+            ctx.fill();
+
+            // cross-flare on the very brightest
+            if (s.r > 2.5) {
+              ctx.save();
+              ctx.globalAlpha = op * 0.35;
+              ctx.strokeStyle = s.sat > 0 ? `hsl(${s.hue},70%,90%)` : '#cce0ff';
+              ctx.lineWidth = 0.6;
+              ctx.beginPath();
+              ctx.moveTo(s.x - s.r*8, s.y); ctx.lineTo(s.x + s.r*8, s.y);
+              ctx.moveTo(s.x, s.y - s.r*8); ctx.lineTo(s.x, s.y + s.r*8);
+              ctx.stroke();
+              ctx.restore();
+            }
+          }
+
           ctx.beginPath();
-          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(${getComputedStyle(document.documentElement).getPropertyValue('--particle-rgb').trim()},${p.opacity})`;
+          ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+          ctx.fillStyle = col;
           ctx.fill();
         }
+
+        /* -- shooting stars -- */
+        shootTimer += dt;
+        if (shootTimer > rand(180, 400)) { spawnShooter(); shootTimer = 0; }
+
+        shooters = shooters.filter(s => s.life > 0);
+        for (const s of shooters) {
+          s.x += s.vx * dt;
+          s.y += s.vy * dt;
+          s.life -= s.decay * dt;
+
+          const tailX = s.x - Math.cos(Math.atan2(s.vy, s.vx)) * s.len * s.life;
+          const tailY = s.y - Math.sin(Math.atan2(s.vy, s.vx)) * s.len * s.life;
+
+          const grad = ctx.createLinearGradient(tailX, tailY, s.x, s.y);
+          grad.addColorStop(0, 'rgba(255,255,255,0)');
+          grad.addColorStop(0.6, `rgba(180,210,255,${s.life * 0.4})`);
+          grad.addColorStop(1,   `rgba(255,255,255,${s.life * 0.9})`);
+
+          ctx.save();
+          ctx.globalCompositeOperation = 'screen';
+          ctx.beginPath();
+          ctx.moveTo(tailX, tailY);
+          ctx.lineTo(s.x, s.y);
+          ctx.strokeStyle = grad;
+          ctx.lineWidth = 1.5 * s.life;
+          ctx.lineCap = 'round';
+          ctx.stroke();
+          ctx.restore();
+        }
+
         requestAnimationFrame(tick);
       }
-      window.addEventListener('resize', () => { resize(); particles.forEach(p => { p.x = rand(0,W); p.baseY = rand(0,H); }); });
-      init();
       requestAnimationFrame(tick);
     })();
   </script>
