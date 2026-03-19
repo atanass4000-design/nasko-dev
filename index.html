@@ -352,7 +352,7 @@ function drawTON(ctx,x,y,bhR,diskW,diskAngle,jetLen,al){
   nb.addColorStop(.2,`rgba(255,160,40,${.08*al})`);
   nb.addColorStop(.6,`rgba(200,80,10,${.03*al})`);
   nb.addColorStop(1,'rgba(0,0,0,0)');
-  ctx.beginPath();ctx.arc(x,y,nr,0,TAU);ctx.fillStyle=nb;ctx.fill();
+  ctx.beginPath();ctx.arc(x,y,Math.max(0,nr),0,TAU);ctx.fillStyle=nb;ctx.fill();
   // jets
   ctx.save();ctx.translate(x,y);ctx.rotate(diskAngle+Math.PI/2);
   for(const d of[-1,1]){
@@ -376,14 +376,14 @@ function drawTON(ctx,x,y,bhR,diskW,diskAngle,jetLen,al){
     const dg=ctx.createRadialGradient(0,0,ir,0,0,or);
     dg.addColorStop(0,`hsla(${30+hs},${sat}%,${lMax}%,${mA*al})`);
     dg.addColorStop(1,`hsla(${35+hs},${sat-10}%,${lMin}%,0)`);
-    ctx.beginPath();ctx.arc(0,0,or,0,TAU);ctx.arc(0,0,Math.max(0,ir),TAU,0,true);
+    ctx.beginPath();ctx.arc(0,0,Math.max(0,or),0,TAU);ctx.arc(0,0,Math.max(0,ir),TAU,0,true);
     ctx.fillStyle=dg;ctx.fill();
   });
-  ctx.beginPath();ctx.arc(0,0,bhR+2,0,TAU);
+  ctx.beginPath();ctx.arc(0,0,Math.max(0,bhR+2),0,TAU);
   ctx.strokeStyle=`rgba(255,240,200,${.92*al})`;ctx.lineWidth=bhR*.12;ctx.stroke();
   const ifl=ctx.createRadialGradient(0,0,bhR*.9,0,0,bhR*1.6);
   ifl.addColorStop(0,`rgba(255,255,240,${.65*al})`);ifl.addColorStop(1,'rgba(255,180,60,0)');
-  ctx.beginPath();ctx.arc(0,0,bhR*1.6,0,TAU);ctx.fillStyle=ifl;ctx.fill();
+  ctx.beginPath();ctx.arc(0,0,Math.max(0,bhR*1.6),0,TAU);ctx.fillStyle=ifl;ctx.fill();
   ctx.restore();
   // event horizon
   ctx.beginPath();ctx.arc(x,y,Math.max(0,bhR),0,TAU);ctx.fillStyle='#000';ctx.fill();
@@ -409,14 +409,14 @@ function bgTick(now){
       const hl=bgX.createRadialGradient(s.x,s.y,0,s.x,s.y,s.r*5);
       hl.addColorStop(0,s.sat>0?`hsla(${s.hue},65%,82%,${op*.4})`:`rgba(200,215,255,${op*.3})`);
       hl.addColorStop(1,'transparent');
-      bgX.beginPath();bgX.arc(s.x,s.y,s.r*5,0,TAU);bgX.fillStyle=hl;bgX.fill();
+      bgX.beginPath();bgX.arc(s.x,s.y,Math.max(0,s.r*5),0,TAU);bgX.fillStyle=hl;bgX.fill();
       if(s.r>2.2){
         bgX.save();bgX.globalAlpha=op*.28;bgX.strokeStyle='#cde';bgX.lineWidth=.5;
         bgX.beginPath();bgX.moveTo(s.x-s.r*9,s.y);bgX.lineTo(s.x+s.r*9,s.y);
         bgX.moveTo(s.x,s.y-s.r*9);bgX.lineTo(s.x,s.y+s.r*9);bgX.stroke();bgX.restore();
       }
     }
-    bgX.beginPath();bgX.arc(s.x,s.y,s.r,0,TAU);bgX.fillStyle=col;bgX.fill();
+    bgX.beginPath();bgX.arc(s.x,s.y,Math.max(0,s.r),0,TAU);bgX.fillStyle=col;bgX.fill();
   }
   // shooting stars
   shootSec-=dt;
@@ -433,7 +433,7 @@ function bgTick(now){
     bgX.save();bgX.globalCompositeOperation='screen';
     bgX.beginPath();bgX.moveTo(tx,ty);bgX.lineTo(s.x,s.y);
     bgX.strokeStyle=sg;bgX.lineWidth=1.8*s.life;bgX.lineCap='round';bgX.stroke();
-    bgX.beginPath();bgX.arc(s.x,s.y,2*s.life,0,TAU);
+    bgX.beginPath();bgX.arc(s.x,s.y,Math.max(0,2*s.life),0,TAU);
     bgX.fillStyle=`rgba(255,255,255,${s.life*.9})`;bgX.fill();bgX.restore();
   }
   // cosmics
@@ -643,7 +643,7 @@ function triggerAsteroid(){
         p2.x+=p2.vx*dt;p2.y+=p2.vy*dt;p2.vy+=p2.grav*dt;p2.life-=p2.decay*dt;
         const r2=Math.max(0,p2.r*p2.life); if(!r2) continue;
         fxX.globalAlpha=Math.max(0,p2.life);
-        fxX.beginPath();fxX.arc(p2.x,p2.y,r2,0,TAU);
+        fxX.beginPath();fxX.arc(p2.x,p2.y,Math.max(0,r2),0,TAU);
         if(p2.rock){fxX.fillStyle=p2.color;}
         else{const pg=fxX.createRadialGradient(p2.x,p2.y,0,p2.x,p2.y,r2);pg.addColorStop(0,p2.color);pg.addColorStop(1,'rgba(0,0,0,0)');fxX.fillStyle=pg;}
         fxX.fill();fxX.globalAlpha=1;
