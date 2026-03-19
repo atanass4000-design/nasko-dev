@@ -49,15 +49,6 @@
       align-items: center;
       justify-content: center;
       transition: background 0.4s ease, color 0.4s ease;
-      cursor: none;
-    }
-
-    /* ── Custom Cursor ── */
-    #cursor-canvas {
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      z-index: 9999;
     }
 
     /* ── Greeting ── */
@@ -287,7 +278,6 @@
 <body>
 
   <canvas id="particles"></canvas>
-  <canvas id="cursor-canvas"></canvas>
 
   <!-- Theme Toggle -->
   <button class="theme-btn" id="themeBtn" aria-label="Toggle theme">
@@ -387,121 +377,6 @@
       document.getElementById('greeting').textContent = greet;
     })();
 
-    /* ── Custom Cursor (Glowing Blue Ring + Sparks) ── */
-    (function () {
-      const canvas = document.getElementById('cursor-canvas');
-      const ctx    = canvas.getContext('2d');
-      let W, H;
-      function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
-      resize();
-      window.addEventListener('resize', resize);
-
-      let mx = -200, my = -200;
-      let tx = -200, ty = -200; // lerp target
-      let isHover = false;
-      let sparks  = [];
-
-      document.addEventListener('mousemove', e => {
-        mx = e.clientX; my = e.clientY;
-      });
-
-      // detect hover over interactive elements
-      document.addEventListener('mouseover', e => {
-        if (e.target.closest('a, button, [role="button"]')) {
-          isHover = true;
-        }
-      });
-      document.addEventListener('mouseout', e => {
-        if (e.target.closest('a, button, [role="button"]')) {
-          isHover = false;
-        }
-      });
-
-      // spawn sparks on click
-      document.addEventListener('click', () => spawnSparks(tx, ty, 14));
-      // continuous sparks on hover
-      let hoverSparkTimer = 0;
-
-      function spawnSparks(x, y, count) {
-        for (let i = 0; i < count; i++) {
-          const angle = Math.random() * Math.PI * 2;
-          const speed = 1.2 + Math.random() * 3;
-          sparks.push({
-            x, y,
-            vx: Math.cos(angle) * speed,
-            vy: Math.sin(angle) * speed,
-            life: 1,
-            decay: 0.03 + Math.random() * 0.04,
-            r: 1.2 + Math.random() * 2,
-          });
-        }
-      }
-
-      let last = performance.now();
-      function tick(now) {
-        const dt = Math.min((now - last) / 16.67, 3); last = now;
-
-        // lerp cursor position — silky smooth
-        tx += (mx - tx) * 0.18;
-        ty += (my - ty) * 0.18;
-
-        ctx.clearRect(0, 0, W, H);
-
-        // continuous hover sparks
-        if (isHover) {
-          hoverSparkTimer += dt;
-          if (hoverSparkTimer > 3) { spawnSparks(tx, ty, 2); hoverSparkTimer = 0; }
-        }
-
-        // draw sparks
-        sparks = sparks.filter(s => s.life > 0);
-        for (const s of sparks) {
-          s.x  += s.vx * dt;
-          s.y  += s.vy * dt;
-          s.vy += 0.08 * dt; // gravity
-          s.life -= s.decay * dt;
-          const sr = Math.max(0, s.r * s.life); // clamp — never negative
-          if (sr <= 0) continue;
-          ctx.beginPath();
-          ctx.arc(s.x, s.y, sr, 0, Math.PI * 2);
-          ctx.fillStyle = `hsla(220, 100%, 75%, ${Math.max(0, s.life * 0.9)})`;
-          ctx.fill();
-        }
-
-        // ring size — bigger on hover
-        const targetR = isHover ? 22 : 14;
-        const ringR   = targetR;
-
-        // outer glow
-        const grd = ctx.createRadialGradient(tx, ty, ringR - 6, tx, ty, ringR + 14);
-        grd.addColorStop(0, `hsla(220, 100%, 70%, ${isHover ? 0.55 : 0.38})`);
-        grd.addColorStop(1, 'hsla(220, 100%, 70%, 0)');
-        ctx.beginPath();
-        ctx.arc(tx, ty, ringR + 14, 0, Math.PI * 2);
-        ctx.fillStyle = grd;
-        ctx.fill();
-
-        // ring stroke
-        ctx.beginPath();
-        ctx.arc(tx, ty, ringR, 0, Math.PI * 2);
-        ctx.strokeStyle = isHover ? 'hsla(200, 100%, 88%, 1)' : 'hsla(220, 100%, 82%, 0.95)';
-        ctx.lineWidth   = isHover ? 3 : 2.2;
-        ctx.shadowColor = 'hsl(220 100% 70%)';
-        ctx.shadowBlur  = isHover ? 24 : 16;
-        ctx.stroke();
-        ctx.shadowBlur = 0;
-
-        // tiny center dot
-        ctx.beginPath();
-        ctx.arc(tx, ty, 2.5, 0, Math.PI * 2);
-        ctx.fillStyle = 'hsla(210, 100%, 95%, 0.9)';
-        ctx.fill();
-
-        requestAnimationFrame(tick);
-      }
-      requestAnimationFrame(tick);
-    })();
-
     /* ── Avatar Wobble on Click ── */
     (function () {
       const avatar = document.getElementById('avatar');
@@ -515,212 +390,289 @@
       });
     })();
 
-    /* ── Nebula Background ── */
+    /* ── Space Background ── */
     (function () {
       const canvas = document.getElementById('particles');
       const ctx    = canvas.getContext('2d');
       let W, H;
-
-      function resize() {
-        W = canvas.width  = window.innerWidth;
-        H = canvas.height = window.innerHeight;
-      }
+      function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
       resize();
-      window.addEventListener('resize', () => { resize(); init(); });
+      window.addEventListener('resize', () => { resize(); makeStars(); });
 
       const rand  = (a, b) => a + Math.random() * (b - a);
       const randI = (a, b) => Math.floor(rand(a, b));
+      const TAU   = Math.PI * 2;
 
-      /* ── 1. Stars ── */
+      /* ── Stars ── */
       let stars = [];
       function makeStars() {
         stars = [];
-        const count = Math.floor((W * H) / 2200);
-        for (let i = 0; i < count; i++) {
+        const n = Math.floor((W * H) / 2400);
+        for (let i = 0; i < n; i++) {
           const tier = Math.random();
           stars.push({
-            x:       rand(0, W),
-            y:       rand(0, H),
-            r:       tier < 0.75 ? rand(0.3, 0.9)   // tiny
-                   : tier < 0.94 ? rand(0.9, 1.8)   // medium
-                   :               rand(1.8, 3.2),   // bright
-            baseOp:  tier < 0.75 ? rand(0.25, 0.55)
-                   : tier < 0.94 ? rand(0.45, 0.75)
-                   :               rand(0.7,  1.0),
-            phase:   rand(0, Math.PI * 2),
-            speed:   rand(0.3, 1.2),
-            // colour: mostly white, some blue-tinted, few purple
-            hue:     Math.random() < 0.6 ? 0
-                   : Math.random() < 0.7 ? randI(210, 240)
-                   :                       randI(260, 280),
-            sat:     Math.random() < 0.6 ? 0 : rand(40, 80),
+            x: rand(0,W), y: rand(0,H),
+            r:      tier<0.78 ? rand(0.25,0.8) : tier<0.95 ? rand(0.8,1.6) : rand(1.6,2.8),
+            baseOp: tier<0.78 ? rand(0.2,0.5)  : tier<0.95 ? rand(0.4,0.7) : rand(0.65,1.0),
+            phase:  rand(0,TAU), speed: rand(0.25,1.1),
+            hue:    Math.random()<0.65 ? 0 : randI(210,270),
+            sat:    Math.random()<0.65 ? 0 : rand(30,70),
           });
         }
       }
+      makeStars();
 
-      /* ── 2. Nebula Clouds ── */
-      let clouds = [];
-      function makeClouds() {
-        clouds = [];
-        const defs = [
-          // [cx%, cy%, rx, ry, hue, sat, baseAlpha, speed]
-          [0.38, 0.28, W*0.38, H*0.30, 225, 85, 0.13, 0.00012],
-          [0.65, 0.55, W*0.30, H*0.28, 240, 90, 0.10, 0.00009],
-          [0.22, 0.62, W*0.25, H*0.22, 260, 80, 0.08, 0.00014],
-          [0.75, 0.20, W*0.20, H*0.18, 210, 75, 0.07, 0.00011],
-          [0.50, 0.72, W*0.35, H*0.20, 235, 88, 0.06, 0.00010],
-        ];
-        defs.forEach(([cxR, cyR, rx, ry, hue, sat, alpha, spd]) => {
-          clouds.push({
-            cx: cxR * W, cy: cyR * H,
-            rx, ry,
-            hue, sat, alpha,
-            phaseX: rand(0, Math.PI*2),
-            phaseY: rand(0, Math.PI*2),
-            speed: spd,
-            driftAmpX: W * rand(0.02, 0.06),
-            driftAmpY: H * rand(0.015, 0.04),
-          });
-        });
-      }
+      /* ── Cosmic Objects ── */
+      let cosmics = [], cosmicTimer = rand(160, 320); // less frequent = fewer asteroids
 
-      /* ── 3. Shooting Stars ── */
-      let shooters = [];
-      let shootTimer = 0;
+      /* ── Shooting Stars ── */
+      let shooters = [], shootTimer = rand(60, 180);
+
       function spawnShooter() {
-        const startX = rand(W * 0.1, W * 0.9);
-        const angle  = rand(Math.PI * 0.1, Math.PI * 0.4);
+        const fromTop = Math.random() < 0.6;
         shooters.push({
-          x: startX, y: rand(0, H * 0.4),
-          vx: Math.cos(angle) * rand(8, 14),
-          vy: Math.sin(angle) * rand(4, 8),
-          len: rand(60, 140),
-          life: 1, decay: rand(0.012, 0.025),
+          x: fromTop ? rand(W*0.05, W*0.95) : (Math.random()<0.5 ? -10 : W+10),
+          y: fromTop ? rand(-10, H*0.3)     : rand(0, H*0.6),
+          vx: rand(6, 16) * (Math.random()<0.5 ? 1 : -1) * (fromTop ? rand(0.3,0.9) : 1),
+          vy: fromTop ? rand(4, 10) : rand(-2, 2),
+          len: rand(55, 160),
+          life: 1, decay: rand(0.008, 0.022),
         });
       }
 
-      function init() { makeStars(); makeClouds(); }
-      init();
+      function spawnCosmic() {
+        // 35% asteroid, 65% black hole — fewer rocks
+        const type     = Math.random() < 0.35 ? 'asteroid' : 'blackhole';
+        const fromLeft = Math.random() < 0.5;
+        const angle    = rand(-0.3, 0.3);
+        const speed    = rand(0.9, 2.5);
+        const obj = {
+          type,
+          x:  fromLeft ? -120 : W + 120,
+          y:  rand(H * 0.05, H * 0.95),
+          vx: Math.cos(angle) * speed * (fromLeft ? 1 : -1),
+          vy: Math.sin(angle) * speed,
+          rot: rand(0, TAU), rotSpeed: rand(-0.02, 0.02),
+          life: 1, decay: rand(0.0005, 0.0013),
+        };
 
-      /* ── Render ── */
-      let t = 0;
-      let last = performance.now();
+        if (type === 'asteroid') {
+          const numPts = randI(7, 13), baseR = rand(12, 38);
+          obj.pts = Array.from({length: numPts}, (_, i) => ({
+            a: (i / numPts) * TAU, r: baseR * rand(0.5, 1.0)
+          }));
+          obj.baseR   = baseR;
+          obj.craters = Array.from({length: randI(2,6)}, () => ({
+            ox: rand(-baseR*0.5, baseR*0.5), oy: rand(-baseR*0.5, baseR*0.5),
+            r: rand(2, baseR * 0.3)
+          }));
+          obj.color  = `hsl(${randI(18,38)},${randI(8,22)}%,${randI(35,55)}%)`;
+          obj.debris = [];
+        } else {
+          // TON 618-style: fixed warm orange/white palette, jets, thick disk
+          obj.bhR       = rand(16, 38);
+          obj.diskW     = obj.bhR * rand(0.55, 0.85); // thick disk proportional to hole
+          obj.spin      = rand(0.005, 0.016) * (Math.random()<0.5 ? 1 : -1);
+          obj.diskAngle = rand(0, TAU);
+          obj.jetLen    = obj.bhR * rand(3.5, 6.0);   // relativistic jets
+          obj.jetAngle  = rand(0, TAU);                // perpendicular to disk
+        }
+        cosmics.push(obj);
+      }
 
-      function tick(now) {
-        const dt = Math.min((now - last) / 16.67, 3);
-        last = now;
-        t   += dt;
-
-        // deep space gradient base
-        const bg = ctx.createLinearGradient(0, 0, W * 0.6, H);
-        bg.addColorStop(0,   '#00000f');
-        bg.addColorStop(0.4, '#03001a');
-        bg.addColorStop(0.7, '#050022');
-        bg.addColorStop(1,   '#000008');
-        ctx.fillStyle = bg;
-        ctx.fillRect(0, 0, W, H);
-
-        /* -- nebula clouds -- */
+      function drawAsteroid(o, dt) {
+        if (Math.random() < 0.4) {
+          o.debris.push({
+            x: o.x+rand(-o.baseR*0.4,o.baseR*0.4), y: o.y+rand(-o.baseR*0.4,o.baseR*0.4),
+            vx: -o.vx*rand(0.05,0.3)+rand(-0.3,0.3), vy: -o.vy*rand(0.05,0.3)+rand(-0.3,0.3),
+            r: rand(0.7,2.2), life: rand(0.5,1), decay: rand(0.01,0.028)
+          });
+        }
+        o.debris = o.debris.filter(d => d.life > 0);
+        for (const d of o.debris) {
+          d.x+=d.vx*dt; d.y+=d.vy*dt; d.life-=d.decay*dt;
+          const dr=Math.max(0,d.r*d.life); if(!dr) continue;
+          ctx.beginPath(); ctx.arc(d.x,d.y,dr,0,TAU);
+          ctx.fillStyle=`rgba(155,125,85,${d.life*0.65*o.life})`; ctx.fill();
+        }
         ctx.save();
-        ctx.globalCompositeOperation = 'screen';
-        for (const c of clouds) {
-          const cx = c.cx + Math.sin(t * c.speed * 0.7 + c.phaseX) * c.driftAmpX;
-          const cy = c.cy + Math.cos(t * c.speed       + c.phaseY) * c.driftAmpY;
-          const pulse = 1 + 0.06 * Math.sin(t * c.speed * 2 + c.phaseX);
+        ctx.translate(o.x,o.y); ctx.rotate(o.rot);
+        ctx.globalAlpha = Math.min(1, o.life * 4);
+        ctx.beginPath();
+        o.pts.forEach((p,i)=>{ const px=Math.cos(p.a)*p.r,py=Math.sin(p.a)*p.r; i?ctx.lineTo(px,py):ctx.moveTo(px,py); });
+        ctx.closePath();
+        const g=ctx.createRadialGradient(-o.baseR*0.3,-o.baseR*0.3,0,0,0,o.baseR*1.1);
+        g.addColorStop(0,'hsl(30,18%,68%)'); g.addColorStop(0.5,o.color); g.addColorStop(1,'hsl(20,8%,16%)');
+        ctx.fillStyle=g; ctx.fill();
+        ctx.strokeStyle='rgba(0,0,0,0.5)'; ctx.lineWidth=1.1; ctx.stroke();
+        for(const cr of o.craters){
+          ctx.beginPath(); ctx.arc(cr.ox,cr.oy,Math.max(0.1,cr.r),0,TAU);
+          ctx.fillStyle='rgba(0,0,0,0.32)'; ctx.fill();
+          ctx.strokeStyle='rgba(255,255,255,0.05)'; ctx.lineWidth=0.5; ctx.stroke();
+        }
+        ctx.restore();
+      }
 
-          // layered ellipse — multiple passes for depth
-          for (let pass = 0; pass < 3; pass++) {
-            const scale = 1 - pass * 0.22;
-            const a     = c.alpha * (1 - pass * 0.28) * pulse;
-            ctx.save();
-            ctx.translate(cx, cy);
-            ctx.scale(c.rx * scale / 100, c.ry * scale / 100);
-            const grd = ctx.createRadialGradient(0, 0, 0, 0, 0, 100);
-            grd.addColorStop(0,   `hsla(${c.hue},${c.sat}%,65%,${a})`);
-            grd.addColorStop(0.4, `hsla(${c.hue+10},${c.sat-10}%,50%,${a*0.6})`);
-            grd.addColorStop(0.75,`hsla(${c.hue+20},${c.sat-20}%,40%,${a*0.25})`);
-            grd.addColorStop(1,   `hsla(${c.hue},${c.sat}%,30%,0)`);
-            ctx.beginPath();
-            ctx.arc(0, 0, 100, 0, Math.PI * 2);
-            ctx.fillStyle = grd;
-            ctx.fill();
-            ctx.restore();
-          }
+      /* ── TON 618 Black Hole ── */
+      function drawBlackHole(o) {
+        const {x, y, bhR, diskW, diskAngle, jetLen, jetAngle, life} = o;
+        const alpha = Math.min(1, life * 4);
+        ctx.save();
+
+        // ── Far outer nebula glow (quasar luminosity) ──
+        const outerR = bhR + diskW * 5;
+        const nebula = ctx.createRadialGradient(x,y,bhR,x,y,outerR);
+        nebula.addColorStop(0,   `rgba(255,180,60,0)`);
+        nebula.addColorStop(0.2, `rgba(255,160,40,${0.07*alpha})`);
+        nebula.addColorStop(0.5, `rgba(200,100,20,${0.04*alpha})`);
+        nebula.addColorStop(1,   'rgba(0,0,0,0)');
+        ctx.beginPath(); ctx.arc(x,y,outerR,0,TAU);
+        ctx.fillStyle=nebula; ctx.fill();
+
+        // ── Relativistic jets (perpendicular to disk) ──
+        ctx.save();
+        ctx.translate(x,y); ctx.rotate(diskAngle + Math.PI/2);
+        for (const dir of [-1, 1]) {
+          // jet beam
+          const jg = ctx.createLinearGradient(0, 0, 0, dir * jetLen);
+          jg.addColorStop(0,   `rgba(180,220,255,${0.55*alpha})`);
+          jg.addColorStop(0.3, `rgba(120,170,255,${0.3*alpha})`);
+          jg.addColorStop(0.7, `rgba(80,120,255,${0.12*alpha})`);
+          jg.addColorStop(1,   'rgba(60,80,200,0)');
+          // cone shape via two triangles
+          const jetW = bhR * 0.38;
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.lineTo(-jetW, dir * jetLen);
+          ctx.lineTo( jetW, dir * jetLen);
+          ctx.closePath();
+          ctx.fillStyle = jg; ctx.fill();
+
+          // bright jet core line
+          const cg = ctx.createLinearGradient(0,0,0,dir*jetLen*0.7);
+          cg.addColorStop(0, `rgba(255,255,255,${0.7*alpha})`);
+          cg.addColorStop(1, 'rgba(150,180,255,0)');
+          ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0, dir*jetLen*0.7);
+          ctx.strokeStyle=cg; ctx.lineWidth=bhR*0.08; ctx.stroke();
         }
         ctx.restore();
 
-        /* -- stars -- */
+        // ── Accretion disk (TON 618: super-bright, orange-white core → red outer) ──
+        ctx.save(); ctx.translate(x,y); ctx.rotate(diskAngle);
+        const scaleY = 0.22; // very flat, nearly edge-on
+        ctx.scale(1, scaleY);
+
+        // 5 disk layers from inner (white-hot) to outer (dim orange-red)
+        const diskColors = [
+          [0,   60, 100, 100, 0.95], // innermost: white-hot
+          [30,  55,  95, 100, 0.78], // bright orange-white
+          [25,  45,  82,  95, 0.58], // orange
+          [20,  35,  65,  80, 0.35], // deep orange
+          [15,  25,  45,  60, 0.15], // dim red-orange outer
+        ];
+        diskColors.forEach(([hueShift, lMin, lMax, sat, maxA], i) => {
+          const ir = bhR + i * (diskW / diskColors.length);
+          const or = ir + diskW / diskColors.length + 1;
+          const dg = ctx.createRadialGradient(0,0,ir,0,0,or);
+          dg.addColorStop(0, `hsla(${30+hueShift},${sat}%,${lMax}%,${maxA*alpha})`);
+          dg.addColorStop(1, `hsla(${35+hueShift},${sat-10}%,${lMin}%,0)`);
+          ctx.beginPath(); ctx.arc(0,0,or,0,TAU); ctx.arc(0,0,Math.max(0,ir),TAU,0,true);
+          ctx.fillStyle=dg; ctx.fill();
+        });
+
+        // photon sphere — bright white ring right at horizon
+        ctx.beginPath(); ctx.arc(0,0, bhR+2, 0, TAU);
+        ctx.strokeStyle=`rgba(255,240,200,${0.9*alpha})`; ctx.lineWidth=bhR*0.12; ctx.stroke();
+
+        // inner edge flare — brightest point of disk
+        const innerFlare=ctx.createRadialGradient(0,0,bhR*0.9,0,0,bhR*1.6);
+        innerFlare.addColorStop(0, `rgba(255,255,240,${0.6*alpha})`);
+        innerFlare.addColorStop(1, 'rgba(255,180,60,0)');
+        ctx.beginPath(); ctx.arc(0,0,bhR*1.6,0,TAU); ctx.fillStyle=innerFlare; ctx.fill();
+
+        ctx.restore(); // undo disk transform
+
+        // ── Event horizon ──
+        ctx.beginPath(); ctx.arc(x,y,bhR,0,TAU);
+        ctx.fillStyle='#000000'; ctx.fill();
+
+        // gravitational shadow ring
+        const shadow=ctx.createRadialGradient(x,y,bhR*0.85,x,y,bhR);
+        shadow.addColorStop(0,'transparent');
+        shadow.addColorStop(1,`rgba(255,160,30,${0.22*alpha})`);
+        ctx.beginPath(); ctx.arc(x,y,bhR,0,TAU); ctx.fillStyle=shadow; ctx.fill();
+
+        ctx.restore();
+      }
+
+
+      let t=0, last=performance.now();
+      function tick(now) {
+        const dt = Math.min((now-last)/16.67, 3); last=now; t+=dt;
+
+        // pure black
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, W, H);
+
+        // stars
         for (const s of stars) {
-          s.phase += s.speed * 0.01 * dt;
-          const op = s.baseOp * (0.7 + 0.3 * Math.sin(s.phase));
-          const col = s.sat > 0
-            ? `hsla(${s.hue},${s.sat}%,85%,${op})`
-            : `rgba(255,255,255,${op})`;
-
-          // halo for bright stars
-          if (s.r > 1.8) {
-            const halo = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.r * 5);
-            halo.addColorStop(0,   s.sat > 0 ? `hsla(${s.hue},80%,80%,${op*0.5})` : `rgba(200,220,255,${op*0.4})`);
-            halo.addColorStop(1,   'transparent');
-            ctx.beginPath();
-            ctx.arc(s.x, s.y, s.r * 5, 0, Math.PI * 2);
-            ctx.fillStyle = halo;
-            ctx.fill();
-
-            // cross-flare on the very brightest
-            if (s.r > 2.5) {
-              ctx.save();
-              ctx.globalAlpha = op * 0.35;
-              ctx.strokeStyle = s.sat > 0 ? `hsl(${s.hue},70%,90%)` : '#cce0ff';
-              ctx.lineWidth = 0.6;
+          s.phase += s.speed * 0.008 * dt;
+          const op  = s.baseOp * (0.72 + 0.28 * Math.sin(s.phase));
+          const col = s.sat>0 ? `hsla(${s.hue},${s.sat}%,88%,${op})` : `rgba(255,255,255,${op})`;
+          if (s.r > 1.6) {
+            const halo=ctx.createRadialGradient(s.x,s.y,0,s.x,s.y,s.r*5);
+            halo.addColorStop(0, s.sat>0?`hsla(${s.hue},65%,82%,${op*0.4})`:`rgba(200,215,255,${op*0.3})`);
+            halo.addColorStop(1,'transparent');
+            ctx.beginPath(); ctx.arc(s.x,s.y,s.r*5,0,TAU); ctx.fillStyle=halo; ctx.fill();
+            if (s.r>2.2) {
+              ctx.save(); ctx.globalAlpha=op*0.28; ctx.strokeStyle='#cde';  ctx.lineWidth=0.5;
               ctx.beginPath();
-              ctx.moveTo(s.x - s.r*8, s.y); ctx.lineTo(s.x + s.r*8, s.y);
-              ctx.moveTo(s.x, s.y - s.r*8); ctx.lineTo(s.x, s.y + s.r*8);
-              ctx.stroke();
-              ctx.restore();
+              ctx.moveTo(s.x-s.r*9,s.y); ctx.lineTo(s.x+s.r*9,s.y);
+              ctx.moveTo(s.x,s.y-s.r*9); ctx.lineTo(s.x,s.y+s.r*9);
+              ctx.stroke(); ctx.restore();
             }
           }
-
-          ctx.beginPath();
-          ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-          ctx.fillStyle = col;
-          ctx.fill();
+          ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,TAU); ctx.fillStyle=col; ctx.fill();
         }
 
-        /* -- shooting stars -- */
-        shootTimer += dt;
-        if (shootTimer > rand(180, 400)) { spawnShooter(); shootTimer = 0; }
-
+        // shooting stars
+        shootTimer -= dt;
+        if (shootTimer <= 0) { spawnShooter(); shootTimer = rand(55, 160); }
         shooters = shooters.filter(s => s.life > 0);
         for (const s of shooters) {
-          s.x += s.vx * dt;
-          s.y += s.vy * dt;
-          s.life -= s.decay * dt;
-
-          const tailX = s.x - Math.cos(Math.atan2(s.vy, s.vx)) * s.len * s.life;
-          const tailY = s.y - Math.sin(Math.atan2(s.vy, s.vx)) * s.len * s.life;
-
-          const grad = ctx.createLinearGradient(tailX, tailY, s.x, s.y);
-          grad.addColorStop(0, 'rgba(255,255,255,0)');
-          grad.addColorStop(0.6, `rgba(180,210,255,${s.life * 0.4})`);
-          grad.addColorStop(1,   `rgba(255,255,255,${s.life * 0.9})`);
-
+          s.x += s.vx*dt; s.y += s.vy*dt; s.life -= s.decay*dt;
+          const ang  = Math.atan2(s.vy, s.vx);
+          const tailX = s.x - Math.cos(ang)*s.len*s.life;
+          const tailY = s.y - Math.sin(ang)*s.len*s.life;
+          const sg = ctx.createLinearGradient(tailX,tailY,s.x,s.y);
+          sg.addColorStop(0,   'rgba(255,255,255,0)');
+          sg.addColorStop(0.55,`rgba(200,225,255,${s.life*0.35})`);
+          sg.addColorStop(1,   `rgba(255,255,255,${s.life*0.95})`);
           ctx.save();
-          ctx.globalCompositeOperation = 'screen';
-          ctx.beginPath();
-          ctx.moveTo(tailX, tailY);
-          ctx.lineTo(s.x, s.y);
-          ctx.strokeStyle = grad;
-          ctx.lineWidth = 1.5 * s.life;
-          ctx.lineCap = 'round';
-          ctx.stroke();
+          ctx.globalCompositeOperation='screen';
+          ctx.beginPath(); ctx.moveTo(tailX,tailY); ctx.lineTo(s.x,s.y);
+          ctx.strokeStyle=sg; ctx.lineWidth=1.6*s.life; ctx.lineCap='round'; ctx.stroke();
+          // bright head dot
+          ctx.beginPath(); ctx.arc(s.x,s.y,1.8*s.life,0,TAU);
+          ctx.fillStyle=`rgba(255,255,255,${s.life*0.9})`; ctx.fill();
           ctx.restore();
+        }
+
+        // cosmic objects
+        cosmicTimer -= dt;
+        if (cosmicTimer <= 0) { spawnCosmic(); cosmicTimer = rand(140, 360); }
+        cosmics = cosmics.filter(o => o.life>0 && o.x>-300 && o.x<W+300 && o.y>-300 && o.y<H+300);
+        for (const o of cosmics) {
+          o.x += o.vx*dt; o.y += o.vy*dt; o.life -= o.decay*dt;
+          if (o.type==='asteroid') { o.rot += o.rotSpeed*dt; drawAsteroid(o,dt); }
+          else { o.diskAngle += o.spin*dt; drawBlackHole(o); }
         }
 
         requestAnimationFrame(tick);
       }
       requestAnimationFrame(tick);
     })();
+
   </script>
 
 </body>
