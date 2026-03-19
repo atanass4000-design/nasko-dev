@@ -460,9 +460,11 @@
           s.y  += s.vy * dt;
           s.vy += 0.08 * dt; // gravity
           s.life -= s.decay * dt;
+          const sr = Math.max(0, s.r * s.life); // clamp — never negative
+          if (sr <= 0) continue;
           ctx.beginPath();
-          ctx.arc(s.x, s.y, s.r * s.life, 0, Math.PI * 2);
-          ctx.fillStyle = `hsla(220, 100%, 75%, ${s.life * 0.9})`;
+          ctx.arc(s.x, s.y, sr, 0, Math.PI * 2);
+          ctx.fillStyle = `hsla(220, 100%, 75%, ${Math.max(0, s.life * 0.9)})`;
           ctx.fill();
         }
 
@@ -471,28 +473,28 @@
         const ringR   = targetR;
 
         // outer glow
-        const grd = ctx.createRadialGradient(tx, ty, ringR - 6, tx, ty, ringR + 10);
-        grd.addColorStop(0, `hsla(220, 100%, 70%, ${isHover ? 0.35 : 0.2})`);
+        const grd = ctx.createRadialGradient(tx, ty, ringR - 6, tx, ty, ringR + 14);
+        grd.addColorStop(0, `hsla(220, 100%, 70%, ${isHover ? 0.55 : 0.38})`);
         grd.addColorStop(1, 'hsla(220, 100%, 70%, 0)');
         ctx.beginPath();
-        ctx.arc(tx, ty, ringR + 10, 0, Math.PI * 2);
+        ctx.arc(tx, ty, ringR + 14, 0, Math.PI * 2);
         ctx.fillStyle = grd;
         ctx.fill();
 
         // ring stroke
         ctx.beginPath();
         ctx.arc(tx, ty, ringR, 0, Math.PI * 2);
-        ctx.strokeStyle = isHover ? 'hsla(200, 100%, 80%, 0.95)' : 'hsla(220, 100%, 75%, 0.85)';
-        ctx.lineWidth   = isHover ? 2.2 : 1.6;
+        ctx.strokeStyle = isHover ? 'hsla(200, 100%, 88%, 1)' : 'hsla(220, 100%, 82%, 0.95)';
+        ctx.lineWidth   = isHover ? 3 : 2.2;
         ctx.shadowColor = 'hsl(220 100% 70%)';
-        ctx.shadowBlur  = isHover ? 18 : 10;
+        ctx.shadowBlur  = isHover ? 24 : 16;
         ctx.stroke();
         ctx.shadowBlur = 0;
 
         // tiny center dot
         ctx.beginPath();
-        ctx.arc(tx, ty, 2, 0, Math.PI * 2);
-        ctx.fillStyle = 'hsla(210, 100%, 90%, 0.7)';
+        ctx.arc(tx, ty, 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = 'hsla(210, 100%, 95%, 0.9)';
         ctx.fill();
 
         requestAnimationFrame(tick);
