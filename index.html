@@ -177,6 +177,12 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const bgC=document.getElementById('bg-canvas'), bgX=bgC.getContext('2d');
 const fxC=document.getElementById('fx-canvas'), fxX=fxC.getContext('2d');
 let W=0,H=0;
+
+/* ── declare all state BEFORE first resize ── */
+let stars=[];
+let shooters=[],shootSec=rand(1.2,3);
+let cosmics=[],cosmicSec=rand(3,7);
+
 function resizeAll(){
   W=bgC.width=fxC.width=window.innerWidth;
   H=bgC.height=fxC.height=window.innerHeight;
@@ -259,7 +265,6 @@ document.addEventListener('mousemove',e=>{ mx=e.clientX; my=e.clientY; });
 /* ═══════════════════════════════════════
    STARS
 ═══════════════════════════════════════ */
-let stars=[];
 function makeStars(){
   stars=[];
   const n=Math.floor(W*H/2400);
@@ -278,7 +283,6 @@ function makeStars(){
 /* ═══════════════════════════════════════
    SHOOTING STARS — real seconds
 ═══════════════════════════════════════ */
-let shooters=[],shootSec=rand(1.2,3);
 function spawnShooter(){
   const fromTop=Math.random()<.6;
   shooters.push({
@@ -293,7 +297,6 @@ function spawnShooter(){
 /* ═══════════════════════════════════════
    COSMIC OBJECTS
 ═══════════════════════════════════════ */
-let cosmics=[],cosmicSec=rand(3,7);
 function spawnCosmic(){
   const type=Math.random()<.3?'asteroid':'blackhole';
   const fl=Math.random()<.5; const spd=rand(50,140); const ang=rand(-.28,.28);
