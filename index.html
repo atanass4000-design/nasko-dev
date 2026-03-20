@@ -140,7 +140,7 @@ body{
   transform-style:preserve-3d;will-change:transform;
   transition:transform .1s linear, opacity .4s ease;
 }
-.stage.fading{opacity:0;transform:perspective(900px) scale(.97)!important;}
+.stage.fading{opacity:0 !important;pointer-events:none;}
 
 .greeting{
   font-size:.78rem;font-weight:600;letter-spacing:.22em;text-transform:uppercase;
@@ -262,7 +262,7 @@ body{
 <div id="cmd-bar">
   <button id="cmd-toggle" aria-label="Command bar">L</button>
   <div id="cmd-input-wrap">
-    <input id="cmd-input" placeholder="/spawn asteroid · /rain · /comet · /planet · /clear" autocomplete="off" spellcheck="false"/>
+    <input id="cmd-input" placeholder="/spawn asteroid · /spawn comet · /rain · /storm · /clear" autocomplete="off" spellcheck="false"/>
   </div>
 </div>
 <div id="cmd-suggestions"></div>
@@ -309,7 +309,7 @@ let W=0,H=0;
 let starsNear=[],starsMid=[],starsFar=[];
 let shooters=[],shootSec=rand(1,3);
 let cosmics=[],cosmicSec=rand(4,8);
-let cometTimer=0;
+let cometTimer=0,cometInterval=15;
 let ripples=[];
 let fxAnim=null;
 let bgT=0,bgLast=performance.now();
@@ -340,20 +340,20 @@ document.addEventListener('fullscreenchange',()=>setTimeout(resizeAll,80));
 document.addEventListener('webkitfullscreenchange',()=>setTimeout(resizeAll,80));
 new ResizeObserver(()=>resizeAll()).observe(document.documentElement);
 
-/* ════ THEME — fade content out, switch, fade back in ════ */
+/* ════ THEME — fade stage out, switch, fade back in ════ */
 if(localStorage.getItem('naskodev_theme')==='light') document.body.classList.add('light');
 document.getElementById('themeBtn').addEventListener('click',()=>{
-  const stage=document.getElementById('stage');
-  stage.classList.add('fading');
+  const stageEl=document.getElementById('stage');
+  stageEl.style.transition='opacity .35s ease';
+  stageEl.style.opacity='0';
   setTimeout(()=>{
     document.body.classList.toggle('light');
     localStorage.setItem('naskodev_theme',document.body.classList.contains('light')?'light':'dark');
-    // update theme icon opacity
     const isLight=document.body.classList.contains('light');
     document.getElementById('th-dark').setAttribute('opacity',isLight?'.3':'.9');
     document.getElementById('th-light').setAttribute('opacity',isLight?'.9':'.3');
-    setTimeout(()=>stage.classList.remove('fading'),50);
-  },300);
+    setTimeout(()=>{stageEl.style.opacity='1';},50);
+  },350);
 });
 
 /* ════ CODE PANEL ════ */
@@ -381,10 +381,6 @@ const cmdSugg=document.getElementById('cmd-suggestions');
 const CMD_LIST=[
   {cmd:'/spawn asteroid',desc:'Launch a rocky asteroid',fn:()=>spawnAsteroid()},
   {cmd:'/spawn comet',desc:'Send a comet across the sky',fn:()=>spawnComet()},
-  {cmd:'/spawn planet',desc:'Planet flyby (random)',fn:()=>spawnPlanet()},
-  {cmd:'/spawn saturn',desc:'Saturn with rings flyby',fn:()=>spawnPlanet('saturn')},
-  {cmd:'/spawn jupiter',desc:'Jupiter with storm bands',fn:()=>spawnPlanet('jupiter')},
-  {cmd:'/spawn mars',desc:'Mars flyby',fn:()=>spawnPlanet('mars')},
   {cmd:'/rain',desc:'10 shooting stars',fn:()=>spawnMeteorRain(10)},
   {cmd:'/storm',desc:'50 shooting stars',fn:()=>spawnMeteorRain(50)},
   {cmd:'/impact',desc:'Asteroid hits Earth',fn:()=>triggerAsteroid()},
@@ -608,23 +604,6 @@ function spawnAsteroid(){
   cosmics.push(o);
 }
 
-/* ════ PLANET FLYBY ════ */
-function spawnPlanet(forceType){
-  const types=['saturn','jupiter','mars','neptune'];
-  const type=forceType||types[randI(0,types.length)];
-  const fl=Math.random()<.5;const spd=rand(18,45);const ang=rand(-.15,.15);
-  cosmics.push({
-    type:'planet',planetType:type,
-    life:1,decay:rand(.00015,.0004),
-    x:fl?-300:W+300,y:rand(H*.08,H*.85),
-    vx:Math.cos(ang)*spd*(fl?1:-1),
-    vy:Math.sin(ang)*spd,
-    rot:rand(0,TAU),rotSpeed:rand(-.005,.005),
-    radius:rand(45,90),
-    tilt:rand(.15,.45), // ring/band tilt
-  });
-}
-
 /* ════ DRAW ASTEROID ════ */
 function drawAsteroid(o,dt){
   // Dust trail emission
@@ -750,117 +729,6 @@ function drawComet(o,dt){
   // Nucleus core
   bgX.beginPath();bgX.arc(o.x,o.y,mxr(o.nucleus),0,TAU);
   bgX.fillStyle=`rgba(255,255,255,${al})`;bgX.fill();
-}
-
-/* ════ DRAW PLANET ════ */
-function drawPlanet(o){
-  const al=clamp(o.life*4,0,1);
-  const R=o.radius;
-  const ctx=bgX;
-  ctx.save();ctx.translate(o.x,o.y);ctx.globalAlpha=al;
-
-  const pt=o.planetType;
-
-  if(pt==='saturn'){
-    // rings behind planet (back half)
-    ctx.save();ctx.scale(1,o.tilt);
-    const rg=ctx.createLinearGradient(-R*2.6,0,R*2.6,0);
-    rg.addColorStop(0,'rgba(0,0,0,0)');
-    rg.addColorStop(.15,`rgba(200,170,110,.65)`);
-    rg.addColorStop(.38,`rgba(180,150,90,.55)`);
-    rg.addColorStop(.48,`rgba(140,115,70,.35)`);
-    rg.addColorStop(.5,'rgba(0,0,0,.1)'); // planet gap
-    rg.addColorStop(.52,`rgba(140,115,70,.35)`);
-    rg.addColorStop(.62,`rgba(180,150,90,.55)`);
-    rg.addColorStop(.85,`rgba(200,170,110,.65)`);
-    rg.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.beginPath();ctx.ellipse(0,0,R*2.6,R*.6,0,0,TAU);
-    ctx.fillStyle=rg;ctx.fill();
-    ctx.restore();
-
-    // Planet body — yellow-tan banded
-    const bg2=ctx.createRadialGradient(-R*.3,-R*.3,R*.1,0,0,R);
-    bg2.addColorStop(0,'hsl(45,60%,80%)');
-    bg2.addColorStop(.35,'hsl(40,55%,65%)');
-    bg2.addColorStop(.7,'hsl(38,50%,52%)');
-    bg2.addColorStop(1,'hsl(35,45%,32%)');
-    ctx.beginPath();ctx.arc(0,0,R,0,TAU);ctx.fillStyle=bg2;ctx.fill();
-
-    // subtle bands
-    for(let b=-3;b<=3;b++){
-      const by=b*R*.22;const bh=R*.06;
-      ctx.beginPath();ctx.ellipse(0,by,R,bh,0,0,TAU);
-      ctx.fillStyle=`rgba(160,130,70,${.12+Math.abs(b)*.03})`;ctx.fill();
-    }
-
-    // rings front half (over planet)
-    ctx.save();ctx.scale(1,o.tilt);
-    ctx.beginPath();ctx.ellipse(0,0,R*2.6,R*.6,0,Math.PI,TAU);
-    ctx.fillStyle=rg;ctx.fill();
-    ctx.restore();
-
-  }else if(pt==='jupiter'){
-    const jg=ctx.createRadialGradient(-R*.3,-R*.3,R*.05,0,0,R);
-    jg.addColorStop(0,'hsl(28,50%,80%)');
-    jg.addColorStop(.3,'hsl(24,48%,68%)');
-    jg.addColorStop(.65,'hsl(22,44%,55%)');
-    jg.addColorStop(1,'hsl(20,40%,30%)');
-    ctx.beginPath();ctx.arc(0,0,R,0,TAU);ctx.fillStyle=jg;ctx.fill();
-
-    // horizontal bands
-    const bandCols=['rgba(200,150,100,.28)','rgba(180,120,80,.22)','rgba(210,160,90,.2)','rgba(160,100,60,.18)'];
-    for(let b=-4;b<=4;b++){
-      if(b===0)continue;
-      ctx.beginPath();ctx.ellipse(0,b*R*.19,R,R*.09,0,0,TAU);
-      ctx.fillStyle=bandCols[Math.abs(b)%bandCols.length];ctx.fill();
-    }
-    // Great Red Spot
-    ctx.save();ctx.rotate(.3);
-    const rs=ctx.createRadialGradient(R*.25,R*.12,0,R*.25,R*.12,R*.22);
-    rs.addColorStop(0,'rgba(200,80,50,.7)');rs.addColorStop(.5,'rgba(180,60,30,.4)');rs.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.beginPath();ctx.ellipse(R*.25,R*.12,R*.22,R*.13,0,0,TAU);ctx.fillStyle=rs;ctx.fill();
-    ctx.restore();
-
-  }else if(pt==='mars'){
-    const mg=ctx.createRadialGradient(-R*.3,-R*.25,R*.05,0,0,R);
-    mg.addColorStop(0,'hsl(15,65%,62%)');
-    mg.addColorStop(.4,'hsl(12,60%,50%)');
-    mg.addColorStop(.75,'hsl(10,55%,38%)');
-    mg.addColorStop(1,'hsl(8,50%,20%)');
-    ctx.beginPath();ctx.arc(0,0,R,0,TAU);ctx.fillStyle=mg;ctx.fill();
-    // polar cap
-    ctx.beginPath();ctx.ellipse(0,-R*.8,R*.45,R*.2,0,0,TAU);ctx.fillStyle='rgba(240,240,255,.55)';ctx.fill();
-    // surface features
-    ctx.fillStyle='rgba(80,40,20,.2)';
-    for(let i=0;i<5;i++){ctx.beginPath();ctx.arc(rand(-R*.5,R*.5),rand(-R*.5,R*.5),rand(R*.05,R*.2),0,TAU);ctx.fill();}
-
-  }else if(pt==='neptune'){
-    const ng=ctx.createRadialGradient(-R*.3,-R*.3,R*.05,0,0,R);
-    ng.addColorStop(0,'hsl(220,80%,60%)');
-    ng.addColorStop(.4,'hsl(215,78%,42%)');
-    ng.addColorStop(.75,'hsl(210,75%,28%)');
-    ng.addColorStop(1,'hsl(205,70%,14%)');
-    ctx.beginPath();ctx.arc(0,0,R,0,TAU);ctx.fillStyle=ng;ctx.fill();
-    // storm spot
-    const nsg=ctx.createRadialGradient(-R*.2,-R*.15,0,-R*.2,-R*.15,R*.28);
-    nsg.addColorStop(0,'rgba(80,120,200,.5)');nsg.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.beginPath();ctx.arc(-R*.2,-R*.15,R*.28,0,TAU);ctx.fillStyle=nsg;ctx.fill();
-  }
-
-  // Atmospheric glow on all planets
-  const ag=ctx.createRadialGradient(0,0,R*.85,0,0,R*1.22);
-  ag.addColorStop(0,'rgba(0,0,0,0)');
-  const atmCol=pt==='neptune'?'100,160,255':pt==='mars'?'200,100,50':'220,190,120';
-  ag.addColorStop(.5,`rgba(${atmCol},.1)`);
-  ag.addColorStop(1,'rgba(0,0,0,0)');
-  ctx.beginPath();ctx.arc(0,0,R*1.22,0,TAU);ctx.fillStyle=ag;ctx.fill();
-
-  // Terminator shadow
-  const sh=ctx.createRadialGradient(R*.4,R*.3,R*.3,0,0,R);
-  sh.addColorStop(0,'rgba(0,0,0,0)');sh.addColorStop(.6,'rgba(0,0,0,.15)');sh.addColorStop(1,'rgba(0,0,0,.55)');
-  ctx.beginPath();ctx.arc(0,0,R,0,TAU);ctx.fillStyle=sh;ctx.fill();
-
-  ctx.restore();
 }
 
 /* ════ SUPERNOVA ════ */
@@ -1153,15 +1021,18 @@ function bgTick(now){
     bgX.restore();
   }
 
-  // Auto comet every 10s
+  // Auto comet — 15s first, 10s cooldown between each
   cometTimer+=dt;
-  if(cometTimer>=10){cometTimer=0;spawnComet();}
+  if(cometTimer>=cometInterval){
+    spawnComet();
+    cometTimer=0;
+    cometInterval=10;
+  }
 
-  // Auto cosmic objects
+  // Auto cosmic objects — asteroids only
   cosmicSec-=dt;
   if(cosmicSec<=0){
-    // Only asteroids and planets in auto-spawn (no black holes)
-    Math.random()<.4?spawnAsteroid():spawnPlanet();
+    spawnAsteroid();
     cosmicSec=rand(5,11);
   }
 
@@ -1171,7 +1042,6 @@ function bgTick(now){
     o.x+=o.vx*dt;o.y+=o.vy*dt;o.life-=o.decay*dt;
     if(o.type==='asteroid'){o.rot+=o.rotSpeed;drawAsteroid(o,dt);}
     else if(o.type==='comet'){drawComet(o,dt);}
-    else if(o.type==='planet'){o.rot+=o.rotSpeed;drawPlanet(o);}
   }
 
   requestAnimationFrame(bgTick);
