@@ -150,7 +150,7 @@ body.ui-hidden #sw-hud,body.ui-hidden #voice-hud{opacity:0!important;pointer-eve
 <!-- Space Weather HUD -->
 <div id="sw-hud">
   <div id="sw-dot"></div>
-  <span id="sw-label">Space weather loading…</span>
+  <span id="sw-label">IRL loading…</span>
 </div>
 
 <!-- Voice HUD -->
@@ -702,26 +702,26 @@ function applySpaceWeather(kp){
   if(kp>=8){
     swData.level='extreme';swData.shooterMult=4;swData.auroraAlpha=.55;swData.tint='red';
     dot.style.background='#f87171';dot.style.boxShadow='0 0 8px #f87171';
-    el.textContent=`Kp ${kp.toFixed(1)} — Extreme storm`;
+    el.textContent=`IRL ${kp.toFixed(1)} — Extreme storm`;
     // burst of shooting stars
     spawnMeteorRain(20);
   }else if(kp>=6){
     swData.level='severe';swData.shooterMult=3;swData.auroraAlpha=.38;swData.tint='orange';
     dot.style.background='#fb923c';dot.style.boxShadow='0 0 8px #fb923c';
-    el.textContent=`Kp ${kp.toFixed(1)} — Severe storm`;
+    el.textContent=`IRL ${kp.toFixed(1)} — Severe storm`;
     spawnMeteorRain(10);
   }else if(kp>=4){
     swData.level='active';swData.shooterMult=2;swData.auroraAlpha=.18;swData.tint='green';
     dot.style.background='#facc15';dot.style.boxShadow='0 0 8px #facc15';
-    el.textContent=`Kp ${kp.toFixed(1)} — Active conditions`;
+    el.textContent=`IRL ${kp.toFixed(1)} — Active conditions`;
   }else if(kp>=2){
     swData.level='unsettled';swData.shooterMult=1.3;swData.auroraAlpha=.06;swData.tint='green';
     dot.style.background='#4ade80';dot.style.boxShadow='0 0 6px #4ade80';
-    el.textContent=`Kp ${kp.toFixed(1)} — Unsettled`;
+    el.textContent=`IRL ${kp.toFixed(1)} — Unsettled`;
   }else{
     swData.level='calm';swData.shooterMult=1;swData.auroraAlpha=0;swData.tint=null;
     dot.style.background='#4ade80';dot.style.boxShadow='0 0 6px #4ade80';
-    el.textContent=`Kp ${kp.toFixed(1)} — Calm conditions`;
+    el.textContent=`IRL ${kp.toFixed(1)} — Calm conditions`;
   }
 }
 
